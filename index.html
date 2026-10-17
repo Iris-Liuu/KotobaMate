@@ -23,7 +23,7 @@ h1 small{display:block;font-family:var(--sans);font-size:14px;font-weight:400;co
 .stats div{flex:1;background:var(--card);border-radius:10px;padding:8px 14px;border:1px solid var(--line);font-size:14px;color:var(--ink2)}
 .stats b{font-size:20px;color:var(--ink);margin-left:6px}
 .seg{display:flex;border:1px solid var(--accent);border-radius:10px;overflow:hidden;margin-bottom:14px;flex-wrap:wrap}
-.seg button{flex:1 1 auto;min-width:75px;border:0;background:#fff;color:var(--accent);padding:8px 4px;font:inherit;font-size:13px;cursor:pointer}
+.seg button{flex:1 1 auto;min-width:80px;border:0;background:#fff;color:var(--accent);padding:9px 4px;font:inherit;font-size:14px;cursor:pointer}
 .seg button+button{border-left:1px solid var(--accent)}
 .seg button[aria-pressed=true]{background:var(--accent);color:#fff}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:32px 20px 24px;text-align:center;position:relative;min-height:220px}
@@ -84,9 +84,7 @@ input[type=text]{width:100%;font:inherit;padding:9px 10px;border:1px solid var(-
   <button data-m="mix" aria-pressed="true">隨機混合</button>
   <button data-m="kanji" aria-pressed="false">只抽漢字</button>
   <button data-m="kana" aria-pressed="false">只抽平假名</button>
-  <button data-m="recent1" aria-pressed="false">近1天新增</button>
-  <button data-m="recent3" aria-pressed="false">近3天新增</button>
-  <button data-m="recent7" aria-pressed="false">近7天新增</button>
+  <button data-m="recent1" aria-pressed="false">近 1 天新增</button>
 </div>
 
 <section class="card" id="card" aria-live="polite"></section>
@@ -165,23 +163,22 @@ function renderStats(){
 /* ---------- pool filter & weighted draw ---------- */
 function filterWordsByMode(){
   if(!words.length) return [];
-  const now = Date.now();
-  if(mode === 'recent1') return words.filter(w => w.createdAt && (now - w.createdAt <= 86400000));
-  if(mode === 'recent3') return words.filter(w => w.createdAt && (now - w.createdAt <= 86400000 * 3));
-  if(mode === 'recent7') return words.filter(w => w.createdAt && (now - w.createdAt <= 86400000 * 7));
+  if(mode === 'recent1'){
+    const currentDay = daysLeft().n;
+    // 篩選距離當前 day 在 1 天以內的單字（即 w.day 為 currentDay 或 currentDay - 1）
+    return words.filter(w => typeof w.day === 'number' && w.day >= currentDay - 1 && w.day <= currentDay);
+  }
   return words;
 }
 
 function weight(w){return BASE[w.level]+14/(1+Math.max(0,w.day)/30);}
 function draw(prev){
   let pool = filterWordsByMode();
-  if(!pool.length){
-    if(mode.startsWith('recent')){
-      alert('在這個時間範圍內沒有新增的單字，將自動換回隨機混合模式。');
-      mode = 'mix';
-      document.querySelectorAll('#modes button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.m===mode));
-      pool = words;
-    }
+  if(!pool.length && mode === 'recent1'){
+    alert('近 1 天沒有新增的單字，將自動切換回隨機混合模式。');
+    mode = 'mix';
+    document.querySelectorAll('#modes button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.m===mode));
+    pool = words;
   }
   if(!pool.length) return null;
   let candidates = pool.length > 1 ? pool.filter(w => w !== prev) : pool;
@@ -239,7 +236,7 @@ function render(){
     a.appendChild(el('div','a1',other));
     a.appendChild(el('div','a2',cur.meaning));
 
-    // 過去回答紀錄功能
+    // 過去回答紀錄
     const history = cur.history || [];
     const hBox = el('div','history-box');
     const hTitle = el('div','history-title');
@@ -251,7 +248,7 @@ function render(){
       hBox.appendChild(el('div', null, '這是第一次進行複習測試。'));
     } else {
       const hTags = el('div','history-tags');
-      const recent = history.slice(-5); // 顯示最近 5 次
+      const recent = history.slice(-5);
       recent.forEach(item => {
         let text = '', cls = '';
         if(item.res === 'no'){ text = '✕ 忘了'; cls = 'no'; }
@@ -293,9 +290,8 @@ function msg(id,t,type){const m=$(id);m.textContent=t;m.className='msg '+(type||
 function key(w){return (w.kanji||'')+'|'+w.kana;}
 function sampleLoad(){
   const day=daysLeft().n; const keys=new Set(words.map(key));
-  const now = Date.now();
   SAMPLE.forEach(([k,h,m])=>{
-    const w={kanji:k,kana:h,meaning:m,level:0,day,createdAt:now,history:[]};
+    const w={kanji:k,kana:h,meaning:m,level:0,day,history:[]};
     if(!keys.has(key(w))) words.push(w);
   });
   save(); renderStats(); next();
@@ -303,7 +299,7 @@ function sampleLoad(){
 $('addBtn').onclick=()=>{
   const kanji=$('fKanji').value.trim(), kana=$('fKana').value.trim(), meaning=$('fMeaning').value.trim();
   if(!kana||!meaning){msg('addMsg','請填寫平假名與中文意思。','err');return;}
-  const w={kanji,kana,meaning,level:0,day:daysLeft().n,createdAt:Date.now(),history:[]};
+  const w={kanji,kana,meaning,level:0,day:daysLeft().n,history:[]};
   if(words.some(x=>key(x)===key(w))){msg('addMsg','這個單字已經在單字庫裡了。','err');return;}
   words.push(w); save(); renderStats();
   ['fKanji','fKana','fMeaning'].forEach(i=>$(i).value='');
@@ -348,13 +344,14 @@ function importCSV(text){
   const H=rows[0].map(h=>h.trim().toLowerCase());
   const idx=names=>H.findIndex(h=>names.includes(h));
   const iK=idx(['漢字','kanji']), iH=idx(['ひらがな','平假名','hiragana','kana']),
-        iM=idx(['意味','中文意思','meaning']), iL=idx(['熟悉度','level']);
+        iM=idx(['意味','中文意思','meaning']), iL=idx(['熟悉度','level']),
+        iD=idx(['day','天數']);
   if(iH<0||iM<0){msg('csvMsg','缺少必要欄位：需要「ひらがな／平假名」與「意味／中文意思」。','err');return;}
-  const day=daysLeft().n, keys=new Set(words.map(key)); let added=0,dup=0; const errs=[];
-  const now = Date.now();
+  const defaultDay=daysLeft().n, keys=new Set(words.map(key)); let added=0,dup=0; const errs=[];
   rows.slice(1).forEach((r,i)=>{
     const n=i+2, g=j=>j>=0?(r[j]||'').trim():'';
-    const w={kanji:g(iK),kana:g(iH),meaning:g(iM),level:0,day,createdAt:now,history:[]};
+    const dayVal = iD>=0 && g(iD)!=='' ? Number(g(iD)) : defaultDay;
+    const w={kanji:g(iK),kana:g(iH),meaning:g(iM),level:0,day:isNaN(dayVal)?defaultDay:dayVal,history:[]};
     if(!w.kana||!w.meaning){errs.push('第 '+n+' 列：平假名或中文意思為空');return;}
     const lv=g(iL);
     if(lv!==''){const v=Number(lv); if(!Number.isInteger(v)||v<0||v>5){errs.push('第 '+n+' 列：熟悉度必須是 0～5 的整數（「'+lv+'」）');return;} w.level=v;}

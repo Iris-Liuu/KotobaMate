@@ -170,13 +170,11 @@ function filterWords(){
   if(!words.length) return [];
   let pool = words;
 
-  // 1. 若開啟「近期新增」，篩選當天 (currentDay) 與 前一天 (currentDay + 1)
   if(isRecentOnly){
     const currentDay = daysLeft().n;
     pool = pool.filter(w => typeof w.day === 'number' && w.day >= currentDay && w.day <= currentDay + 1);
   }
 
-  // 2. 若為「只抽漢字」，確保單字必須有漢字
   if(mode === 'kanji'){
     pool = pool.filter(w => w.kanji && w.kanji.trim() !== '');
   }
@@ -188,7 +186,6 @@ function weight(w){return BASE[w.level]+14/(1+Math.max(0,w.day)/30);}
 function draw(prev){
   let pool = filterWords();
 
-  // 若開了「近期新增」但篩選出來沒有單字，彈窗提醒並取消「近期新增」
   if(!pool.length && isRecentOnly){
     alert('近期（近 2 天內）沒有新增符合條件的單字，將取消「近期新增」篩選。');
     isRecentOnly = false;
@@ -216,7 +213,8 @@ function next(){
   cur=words.length?draw(cur):null;
   if(cur) qType=pickType(cur);
   shown=false; rated=false; render();
-  if(cur) speak();
+  // 只有當出題類型為「平假名」時才自動播放語音
+  if(cur && qType === 'kana') speak();
 }
 
 /* ---------- speech ---------- */

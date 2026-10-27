@@ -20,7 +20,6 @@ h1 small{display:block;font-family:var(--sans);font-size:14px;font-weight:400;co
 .count span{font-size:13px;color:var(--ink2);display:block}
 .count input{font:inherit;font-size:13px;border:1px solid var(--line);border-radius:6px;padding:2px 6px;background:#fff;color:var(--ink)}
 
-/* 頁面導覽 Tab */
 .nav-tabs{display:flex;gap:8px;margin-bottom:16px;border-bottom:2px solid var(--line);padding-bottom:8px}
 .nav-tabs button{border:0;background:transparent;color:var(--ink2);font:inherit;font-size:16px;font-weight:700;padding:6px 12px;cursor:pointer;border-radius:6px}
 .nav-tabs button.active{background:var(--accent);color:#fff}
@@ -75,7 +74,6 @@ input[type=text]{width:100%;font:inherit;padding:9px 10px;border:1px solid var(-
 .empty p{margin:0 0 14px;color:var(--ink2)}
 .small{font-size:13px;color:var(--ink2)}
 
-/* 排行榜表格樣式 */
 .rank-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin-top:10px}
 .rank-table{width:100%;border-collapse:collapse;font-size:14px;text-align:left}
 .rank-table th,.rank-table td{padding:10px 8px;border-bottom:1px solid var(--line)}
@@ -97,13 +95,11 @@ input[type=text]{width:100%;font:inherit;padding:9px 10px;border:1px solid var(-
   </div>
 </header>
 
-<!-- 頁面切換分頁 -->
 <nav class="nav-tabs" role="tablist">
   <button id="tabReview" class="active" onclick="switchPage('review')">🎴 單字卡複習</button>
   <button id="tabRanking" onclick="switchPage('ranking')">📊 弱點排行榜 TOP 10</button>
 </nav>
 
-<!-- 主頁面：單字卡複習 -->
 <div id="pageReview" class="page active">
   <section class="stats" aria-label="學習統計">
     <div>單字總數<b id="total">0</b></div>
@@ -148,7 +144,6 @@ input[type=text]{width:100%;font:inherit;padding:9px 10px;border:1px solid var(-
   </details>
 </div>
 
-<!-- 分頁：弱點排行榜 -->
 <div id="pageRanking" class="page">
   <div class="rank-card">
     <h2 style="margin:0 0 12px;font-size:20px;font-family:var(--serif)">錯最多次的單字 TOP 10</h2>
@@ -172,24 +167,25 @@ const $=id=>document.getElementById(id);
 let words=[], examStr='2026-12-06', mode='mix', isRecentOnly=false;
 let cur=null, qType='kana', shown=false, rated=false;
 
-/* ---------- page switch ---------- */
 window.switchPage = function(pName){
   if(pName === 'review'){
-    $('pageReview').classList.add('active');$('pageRanking').classList.remove('active');
-    $('tabReview').classList.add('active');$('tabRanking').classList.remove('active');
+    $('pageReview').classList.add('active');
+    $('pageRanking').classList.remove('active');
+    $('tabReview').classList.add('active');
+    $('tabRanking').classList.remove('active');
   } else {
-    $('pageReview').classList.remove('active');$('pageRanking').classList.add('active');
-    $('tabReview').classList.remove('active');$('tabRanking').classList.add('active');
+    $('pageReview').classList.remove('active');
+    $('pageRanking').classList.add('active');
+    $('tabReview').classList.remove('active');
+    $('tabRanking').classList.add('active');
     renderRanking();
   }
 };
 
-/* ---------- render ranking ---------- */
 function renderRanking(){
   const container = $('rankContainer');
   container.innerHTML = '';
 
-  // 篩選有歷史紀錄且按過「忘了」的單字，並計算總忘了次數
   const rankedWords = words.map(w => {
     const history = w.history || [];
     const forgotCount = history.filter(h => h.res === 'no').length;
@@ -198,7 +194,7 @@ function renderRanking(){
   })
   .filter(w => w.forgotCount > 0)
   .sort((a, b) => b.forgotCount - a.forgotCount)
-  .slice(0, 10); // 只取前 10 名
+  .slice(0, 10);
 
   if(rankedWords.length === 0){
     container.innerHTML = '<p class="small" style="text-align:center;padding:20px 0">目前還沒有「忘記」的練習紀錄喔！繼續加油！</p>';
@@ -206,37 +202,21 @@ function renderRanking(){
   }
 
   const table = el('table', 'rank-table');
-  table.innerHTML = `
-    <thead>
-      <tr>
-        <th style="text-align:center">名次</th>
-        <th>單字（漢字 / 平假名）</th>
-        <th>中文意思</th>
-        <th style="text-align:right">忘記次數</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  `;
+  table.innerHTML = '<thead><tr><th style="text-align:center">名次</th><th>單字（漢字 / 平假名）</th><th>中文意思</th><th style="text-align:right">忘記次數</th></tr></thead><tbody></tbody>';
   const tbody = table.querySelector('tbody');
 
   rankedWords.forEach((item, index) => {
     const tr = el('tr');
     const isTop3 = index < 3 ? ' top3' : '';
-    const wordDisplay = item.kanji ? `<b>${item.kanji}</b> (${item.kana})` : `<b>${item.kana}</b>`;
+    const wordDisplay = item.kanji ? '<b>' + item.kanji + '</b> (' + item.kana + ')' : '<b>' + item.kana + '</b>';
     
-    tr.innerHTML = `
-      <td class="rank-num${isTop3}">#${index + 1}</td>
-      <td>${wordDisplay}</td>
-      <td>${item.meaning}</td>
-      <td style="text-align:right"><span class="bad-tag">${item.forgotCount} 次</span> <small class="small">(/ ${item.totalCount} 次)</small></td>
-    `;
+    tr.innerHTML = '<td class="rank-num' + isTop3 + '">#' + (index + 1) + '</td><td>' + wordDisplay + '</td><td>' + item.meaning + '</td><td style="text-align:right"><span class="bad-tag">' + item.forgotCount + ' 次</span> <small class="small">(/ ' + item.totalCount + ' 次)</small></td>';
     tbody.appendChild(tr);
   });
 
   container.appendChild(table);
 }
 
-/* ---------- storage ---------- */
 function load(){
   try{
     const w=JSON.parse(localStorage.getItem(WK)||'[]'); 
@@ -246,7 +226,6 @@ function load(){
 }
 function save(){try{localStorage.setItem(WK,JSON.stringify(words));}catch(e){}}
 
-/* ---------- exam countdown ---------- */
 function toLocal(s){const p=(s||'').split('-').map(Number);return p.length===3&&p[0]?new Date(p[0],p[1]-1,p[2]):null;}
 function daysLeft(){
   const e=toLocal(examStr); if(!e) return {n:0,over:false,none:true};
@@ -261,13 +240,11 @@ function renderCount(){
   $('daysLabel').textContent=d.over?'考試已結束':(d.n===0?'今天考試':'天後考試');
 }
 
-/* ---------- stats ---------- */
 function renderStats(){
   $('total').textContent=words.length;
   $('avg').textContent=words.length?(words.reduce((s,w)=>s+w.level,0)/words.length).toFixed(1):'0.0';
 }
 
-/* ---------- pool filter & weighted draw ---------- */
 function filterWords(){
   if(!words.length) return [];
   let pool = words;
@@ -318,7 +295,6 @@ function next(){
   if(cur && qType === 'kana') speak();
 }
 
-/* ---------- speech ---------- */
 function speak(){
   try{
     if(!('speechSynthesis' in window)||!cur) return;
@@ -330,7 +306,6 @@ function speak(){
   }catch(e){}
 }
 
-/* ---------- render card ---------- */
 function el(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e;}
 function render(){
   const card=$('card'), act=$('actions'); card.innerHTML=''; act.innerHTML='';
@@ -351,7 +326,6 @@ function render(){
     a.appendChild(el('div','a1',other));
     a.appendChild(el('div','a2',cur.meaning));
 
-    // 過去回答紀錄
     const history = cur.history || [];
     const hBox = el('div','history-box');
     const hTitle = el('div','history-title');
@@ -400,7 +374,6 @@ function rate(d, resType){
   save(); renderStats(); next();
 }
 
-/* ---------- add words ---------- */
 function msg(id,t,type){const m=$(id);m.textContent=t;m.className='msg '+(type||'');}
 function key(w){return (w.kanji||'')+'|'+w.kana;}
 function sampleLoad(){
@@ -422,7 +395,6 @@ $('addBtn').onclick=()=>{
   if(!cur) next();
 };
 
-/* ---------- CSV ---------- */
 function parseCSV(text){
   text=text.replace(/^\uFEFF/,''); const rows=[]; let row=[],f='',q=false;
   for(let i=0;i<text.length;i++){
@@ -445,7 +417,58 @@ $('exportBtn').onclick=()=>{
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
   msg('csvMsg','已匯出 '+words.length+' 個單字。','ok');
 };
-$('importBtn').onclick=()=>$('file').click();$('file').onchange=e=>{
+$('importBtn').onclick=()=>$('file').click();
+$('file').onchange=e=>{
   const f=e.target.files[0]; if(!f) return;
   const rd=new FileReader();
-  rd.onload=()=>{ try{importCSV(String(rd.result));}catch(err){msg('csvMsg','讀取失敗：
+  rd.onload=()=>{ try{importCSV(String(rd.result));}catch(err){msg('csvMsg','讀取失敗：檔案格式不正確。','err');} $('file').value=''; };
+  rd.onerror=()=>msg('csvMsg','讀取檔案時發生錯誤。','err');
+  rd.readAsText(f,'utf-8');
+};
+function importCSV(text){
+  const rows=parseCSV(text);
+  if(rows.length<2){msg('csvMsg','CSV 沒有資料列，請確認第一列是欄位名稱。','err');return;}
+  const H=rows[0].map(h=>h.trim().toLowerCase());
+  const idx=names=>H.findIndex(h=>names.includes(h));
+  const iK=idx(['漢字','kanji']), iH=idx(['ひらがな','平假名','hiragana','kana']),
+        iM=idx(['意味','中文意思','meaning']), iL=idx(['熟悉度','level']),
+        iD=idx(['day','天數']);
+  if(iH<0||iM<0){msg('csvMsg','缺少必要欄位：需要「ひらがな／平假名」與「意味／中文意思」。','err');return;}
+  const defaultDay=daysLeft().n, keys=new Set(words.map(key)); let added=0,dup=0; const errs=[];
+  rows.slice(1).forEach((r,i)=>{
+    const n=i+2, g=j=>j>=0?(r[j]||'').trim():'';
+    const dayVal = iD>=0 && g(iD)!=='' ? Number(g(iD)) : defaultDay;
+    const w={kanji:g(iK),kana:g(iH),meaning:g(iM),level:0,day:isNaN(dayVal)?defaultDay:dayVal,history:[]};
+    if(!w.kana||!w.meaning){errs.push('第 '+n+' 列：平假名或中文意思為空');return;}
+    const lv=g(iL);
+    if(lv!==''){const v=Number(lv); if(!Number.isInteger(v)||v<0||v>5){errs.push('第 '+n+' 列：熟悉度必須是 0～5 的整數（「'+lv+'」）');return;} w.level=v;}
+    if(keys.has(key(w))){dup++;return;}
+    keys.add(key(w)); words.push(w); added++;
+  });
+  save(); renderStats();
+  let t='新增 '+added+' 個單字，略過重複 '+dup+' 個'+(errs.length?'，有問題的資料 '+errs.length+' 列未匯入：\n'+errs.slice(0,8).join('\n')+(errs.length>8?'\n…':''):'。');
+  msg('csvMsg',t,errs.length&&!added?'err':'ok');
+  if(!cur&&words.length) next();
+}
+
+$('modes').onclick=e=>{
+  const b=e.target.closest('button'); if(!b||b.dataset.m===mode) return;
+  mode=b.dataset.m;
+  document.querySelectorAll('#modes button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.m===mode));
+  next();
+};
+$('recentBtn').onclick=()=>{
+  isRecentOnly = !isRecentOnly;
+  $('recentBtn').setAttribute('aria-pressed', isRecentOnly);
+  next();
+};
+$('examDate').onchange=e=>{
+  examStr=e.target.value; try{localStorage.setItem(EK,examStr);}catch(err){} renderCount();
+};
+if('speechSynthesis' in window) speechSynthesis.onvoiceschanged=()=>{};
+
+load(); renderCount(); renderStats(); next();
+})();
+</script>
+</body>
+</html>

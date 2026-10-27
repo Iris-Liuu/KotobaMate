@@ -19,6 +19,15 @@ h1 small{display:block;font-family:var(--sans);font-size:14px;font-weight:400;co
 .count b{font-family:var(--serif);font-size:44px;line-height:1;color:var(--accent)}
 .count span{font-size:13px;color:var(--ink2);display:block}
 .count input{font:inherit;font-size:13px;border:1px solid var(--line);border-radius:6px;padding:2px 6px;background:#fff;color:var(--ink)}
+
+/* 頁面導覽 Tab */
+.nav-tabs{display:flex;gap:8px;margin-bottom:16px;border-bottom:2px solid var(--line);padding-bottom:8px}
+.nav-tabs button{border:0;background:transparent;color:var(--ink2);font:inherit;font-size:16px;font-weight:700;padding:6px 12px;cursor:pointer;border-radius:6px}
+.nav-tabs button.active{background:var(--accent);color:#fff}
+
+.page{display:none}
+.page.active{display:block}
+
 .stats{display:flex;gap:10px;margin-bottom:14px}
 .stats div{flex:1;background:var(--card);border-radius:10px;padding:8px 14px;border:1px solid var(--line);font-size:14px;color:var(--ink2)}
 .stats b{font-size:20px;color:var(--ink);margin-left:6px}
@@ -65,6 +74,16 @@ input[type=text]{width:100%;font:inherit;padding:9px 10px;border:1px solid var(-
 .empty{padding:20px 0}
 .empty p{margin:0 0 14px;color:var(--ink2)}
 .small{font-size:13px;color:var(--ink2)}
+
+/* 排行榜表格樣式 */
+.rank-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin-top:10px}
+.rank-table{width:100%;border-collapse:collapse;font-size:14px;text-align:left}
+.rank-table th,.rank-table td{padding:10px 8px;border-bottom:1px solid var(--line)}
+.rank-table th{color:var(--ink2);font-weight:500;font-size:13px}
+.rank-num{font-weight:700;font-family:var(--serif);font-size:16px;color:var(--accent);width:36px;text-align:center}
+.rank-num.top3{color:var(--red);font-size:18px}
+.bad-tag{color:var(--red);font-weight:700}
+
 @media(prefers-reduced-motion:reduce){.ans{animation:none}}
 </style>
 </head>
@@ -78,47 +97,66 @@ input[type=text]{width:100%;font:inherit;padding:9px 10px;border:1px solid var(-
   </div>
 </header>
 
-<section class="stats" aria-label="學習統計">
-  <div>單字總數<b id="total">0</b></div>
-  <div>平均熟悉度<b id="avg">0.0</b><span class="small">/ 5</span></div>
-</section>
+<!-- 頁面切換分頁 -->
+<nav class="nav-tabs" role="tablist">
+  <button id="tabReview" class="active" onclick="switchPage('review')">🎴 單字卡複習</button>
+  <button id="tabRanking" onclick="switchPage('ranking')">📊 弱點排行榜 TOP 10</button>
+</nav>
 
-<div class="controls">
-  <div class="seg" role="group" aria-label="出題模式" id="modes">
-    <button data-m="mix" aria-pressed="true">隨機混合</button>
-    <button data-m="kanji" aria-pressed="false">只抽漢字</button>
-    <button data-m="kana" aria-pressed="false">只抽平假名</button>
+<!-- 主頁面：單字卡複習 -->
+<div id="pageReview" class="page active">
+  <section class="stats" aria-label="學習統計">
+    <div>單字總數<b id="total">0</b></div>
+    <div>平均熟悉度<b id="avg">0.0</b><span class="small">/ 5</span></div>
+  </section>
+
+  <div class="controls">
+    <div class="seg" role="group" aria-label="出題模式" id="modes">
+      <button data-m="mix" aria-pressed="true">隨機混合</button>
+      <button data-m="kanji" aria-pressed="false">只抽漢字</button>
+      <button data-m="kana" aria-pressed="false">只抽平假名</button>
+    </div>
+    <button class="toggle-btn" id="recentBtn" aria-pressed="false">✨ 近期新增</button>
   </div>
-  <button class="toggle-btn" id="recentBtn" aria-pressed="false">✨ 近期新增</button>
+
+  <section class="card" id="card" aria-live="polite"></section>
+  <div id="actions"></div>
+
+  <details id="addBox">
+    <summary>新增單字</summary>
+    <div>
+      <label>漢字（沒有可留空）<input type="text" id="fKanji" autocomplete="off"></label>
+      <label>平假名（必填）<input type="text" id="fKana" autocomplete="off"></label>
+      <label>中文意思（必填）<input type="text" id="fMeaning" autocomplete="off"></label>
+      <div class="row" style="justify-content:flex-start"><button class="btn" id="addBtn">加入單字庫</button></div>
+      <p class="small">熟悉度會從 0 開始，day 由系統依考試日期自動記錄。</p>
+      <div class="msg" id="addMsg"></div>
+    </div>
+  </details>
+
+  <details id="csvBox">
+    <summary>CSV 匯入與匯出</summary>
+    <div>
+      <p class="small">欄位：漢字、ひらがな（或 平假名）、意味（或 中文意思）、熟悉度、day。匯入時只會加入新單字，已存在的單字不會被覆蓋。</p>
+      <div class="row" style="justify-content:flex-start">
+        <button class="btn" id="exportBtn">匯出 CSV</button>
+        <button class="btn ghost" id="importBtn">選擇 CSV 匯入</button>
+        <input type="file" id="file" accept=".csv,text/csv" hidden>
+      </div>
+      <div class="msg" id="csvMsg"></div>
+    </div>
+  </details>
 </div>
 
-<section class="card" id="card" aria-live="polite"></section>
-<div id="actions"></div>
-
-<details id="addBox">
-  <summary>新增單字</summary>
-  <div>
-    <label>漢字（沒有可留空）<input type="text" id="fKanji" autocomplete="off"></label>
-    <label>平假名（必填）<input type="text" id="fKana" autocomplete="off"></label>
-    <label>中文意思（必填）<input type="text" id="fMeaning" autocomplete="off"></label>
-    <div class="row" style="justify-content:flex-start"><button class="btn" id="addBtn">加入單字庫</button></div>
-    <p class="small">熟悉度會從 0 開始，day 由系統依考試日期自動記錄。</p>
-    <div class="msg" id="addMsg"></div>
+<!-- 分頁：弱點排行榜 -->
+<div id="pageRanking" class="page">
+  <div class="rank-card">
+    <h2 style="margin:0 0 12px;font-size:20px;font-family:var(--serif)">錯最多次的單字 TOP 10</h2>
+    <p class="small" style="margin-bottom:16px">根據你按過「✕ 忘了」的累積次數進行排名：</p>
+    <div id="rankContainer"></div>
   </div>
-</details>
+</div>
 
-<details id="csvBox">
-  <summary>CSV 匯入與匯出</summary>
-  <div>
-    <p class="small">欄位：漢字、ひらがな（或 平假名）、意味（或 中文意思）、熟悉度、day。匯入時只會加入新單字，已存在的單字不會被覆蓋。</p>
-    <div class="row" style="justify-content:flex-start">
-      <button class="btn" id="exportBtn">匯出 CSV</button>
-      <button class="btn ghost" id="importBtn">選擇 CSV 匯入</button>
-      <input type="file" id="file" accept=".csv,text/csv" hidden>
-    </div>
-    <div class="msg" id="csvMsg"></div>
-  </div>
-</details>
 <p class="small" style="margin-top:16px">資料儲存在這個瀏覽器的 localStorage，換裝置或網址不會同步，請定期匯出 CSV 備份。</p>
 </main>
 
@@ -133,6 +171,70 @@ const SAMPLE=[
 const $=id=>document.getElementById(id);
 let words=[], examStr='2026-12-06', mode='mix', isRecentOnly=false;
 let cur=null, qType='kana', shown=false, rated=false;
+
+/* ---------- page switch ---------- */
+window.switchPage = function(pName){
+  if(pName === 'review'){
+    $('pageReview').classList.add('active');$('pageRanking').classList.remove('active');
+    $('tabReview').classList.add('active');$('tabRanking').classList.remove('active');
+  } else {
+    $('pageReview').classList.remove('active');$('pageRanking').classList.add('active');
+    $('tabReview').classList.remove('active');$('tabRanking').classList.add('active');
+    renderRanking();
+  }
+};
+
+/* ---------- render ranking ---------- */
+function renderRanking(){
+  const container = $('rankContainer');
+  container.innerHTML = '';
+
+  // 篩選有歷史紀錄且按過「忘了」的單字，並計算總忘了次數
+  const rankedWords = words.map(w => {
+    const history = w.history || [];
+    const forgotCount = history.filter(h => h.res === 'no').length;
+    const totalCount = history.length;
+    return { ...w, forgotCount, totalCount };
+  })
+  .filter(w => w.forgotCount > 0)
+  .sort((a, b) => b.forgotCount - a.forgotCount)
+  .slice(0, 10); // 只取前 10 名
+
+  if(rankedWords.length === 0){
+    container.innerHTML = '<p class="small" style="text-align:center;padding:20px 0">目前還沒有「忘記」的練習紀錄喔！繼續加油！</p>';
+    return;
+  }
+
+  const table = el('table', 'rank-table');
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th style="text-align:center">名次</th>
+        <th>單字（漢字 / 平假名）</th>
+        <th>中文意思</th>
+        <th style="text-align:right">忘記次數</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  `;
+  const tbody = table.querySelector('tbody');
+
+  rankedWords.forEach((item, index) => {
+    const tr = el('tr');
+    const isTop3 = index < 3 ? ' top3' : '';
+    const wordDisplay = item.kanji ? `<b>${item.kanji}</b> (${item.kana})` : `<b>${item.kana}</b>`;
+    
+    tr.innerHTML = `
+      <td class="rank-num${isTop3}">#${index + 1}</td>
+      <td>${wordDisplay}</td>
+      <td>${item.meaning}</td>
+      <td style="text-align:right"><span class="bad-tag">${item.forgotCount} 次</span> <small class="small">(/ ${item.totalCount} 次)</small></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  container.appendChild(table);
+}
 
 /* ---------- storage ---------- */
 function load(){
@@ -213,7 +315,6 @@ function next(){
   cur=words.length?draw(cur):null;
   if(cur) qType=pickType(cur);
   shown=false; rated=false; render();
-  // 只有當出題類型為「平假名」時才自動播放語音
   if(cur && qType === 'kana') speak();
 }
 
@@ -344,59 +445,7 @@ $('exportBtn').onclick=()=>{
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
   msg('csvMsg','已匯出 '+words.length+' 個單字。','ok');
 };
-$('importBtn').onclick=()=>$('file').click();
-$('file').onchange=e=>{
+$('importBtn').onclick=()=>$('file').click();$('file').onchange=e=>{
   const f=e.target.files[0]; if(!f) return;
   const rd=new FileReader();
-  rd.onload=()=>{ try{importCSV(String(rd.result));}catch(err){msg('csvMsg','讀取失敗：檔案格式不正確。','err');} $('file').value=''; };
-  rd.onerror=()=>msg('csvMsg','讀取檔案時發生錯誤。','err');
-  rd.readAsText(f,'utf-8');
-};
-function importCSV(text){
-  const rows=parseCSV(text);
-  if(rows.length<2){msg('csvMsg','CSV 沒有資料列，請確認第一列是欄位名稱。','err');return;}
-  const H=rows[0].map(h=>h.trim().toLowerCase());
-  const idx=names=>H.findIndex(h=>names.includes(h));
-  const iK=idx(['漢字','kanji']), iH=idx(['ひらがな','平假名','hiragana','kana']),
-        iM=idx(['意味','中文意思','meaning']), iL=idx(['熟悉度','level']),
-        iD=idx(['day','天數']);
-  if(iH<0||iM<0){msg('csvMsg','缺少必要欄位：需要「ひらがな／平假名」與「意味／中文意思」。','err');return;}
-  const defaultDay=daysLeft().n, keys=new Set(words.map(key)); let added=0,dup=0; const errs=[];
-  rows.slice(1).forEach((r,i)=>{
-    const n=i+2, g=j=>j>=0?(r[j]||'').trim():'';
-    const dayVal = iD>=0 && g(iD)!=='' ? Number(g(iD)) : defaultDay;
-    const w={kanji:g(iK),kana:g(iH),meaning:g(iM),level:0,day:isNaN(dayVal)?defaultDay:dayVal,history:[]};
-    if(!w.kana||!w.meaning){errs.push('第 '+n+' 列：平假名或中文意思為空');return;}
-    const lv=g(iL);
-    if(lv!==''){const v=Number(lv); if(!Number.isInteger(v)||v<0||v>5){errs.push('第 '+n+' 列：熟悉度必須是 0～5 的整數（「'+lv+'」）');return;} w.level=v;}
-    if(keys.has(key(w))){dup++;return;}
-    keys.add(key(w)); words.push(w); added++;
-  });
-  save(); renderStats();
-  let t='新增 '+added+' 個單字，略過重複 '+dup+' 個'+(errs.length?'，有問題的資料 '+errs.length+' 列未匯入：\n'+errs.slice(0,8).join('\n')+(errs.length>8?'\n…':''):'。');
-  msg('csvMsg',t,errs.length&&!added?'err':'ok');
-  if(!cur&&words.length) next();
-}
-
-/* ---------- events ---------- */
-$('modes').onclick=e=>{
-  const b=e.target.closest('button'); if(!b||b.dataset.m===mode) return;
-  mode=b.dataset.m;
-  document.querySelectorAll('#modes button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.m===mode));
-  next();
-};
-$('recentBtn').onclick=()=>{
-  isRecentOnly = !isRecentOnly;
-  $('recentBtn').setAttribute('aria-pressed', isRecentOnly);
-  next();
-};
-$('examDate').onchange=e=>{
-  examStr=e.target.value; try{localStorage.setItem(EK,examStr);}catch(err){} renderCount();
-};
-if('speechSynthesis' in window) speechSynthesis.onvoiceschanged=()=>{};
-
-load(); renderCount(); renderStats(); next();
-})();
-</script>
-</body>
-</html>
+  rd.onload=()=>{ try{importCSV(String(rd.result));}catch(err){msg('csvMsg','讀取失敗：

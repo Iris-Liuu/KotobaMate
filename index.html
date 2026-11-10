@@ -84,7 +84,7 @@ input[type=text],input[type=number]{width:100%;font:inherit;padding:9px 10px;bor
 .rank-num.top3{color:var(--red);font-size:18px}
 .bad-tag{color:var(--red);font-weight:700}
 
-/* 編輯單字庫頁面樣式 */
+/* 編輯單字庫與分析圖表樣式 */
 .edit-search{display:flex;gap:10px;margin-bottom:14px}
 .word-list{display:flex;flex-direction:column;gap:8px;max-height:500px;overflow-y:auto;padding-right:4px}
 .word-item{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center}
@@ -96,7 +96,15 @@ input[type=text],input[type=number]{width:100%;font:inherit;padding:9px 10px;bor
 .modal{background:var(--card);border-radius:14px;padding:24px;width:100%;max-width:480px;box-shadow:0 10px 25px rgba(0,0,0,0.15)}
 .modal h3{margin:0 0 16px;font-family:var(--serif);font-size:20px}
 
-@media(prefers-reduced-motion:reduce){.ans{animation:none}}
+/* 長條圖專用 CSS */
+.chart-container{display:flex;flex-direction:column;gap:12px;margin-top:16px}
+.chart-row{display:flex;align-items:center;gap:10px;font-size:13px}
+.chart-label{width:75px;color:var(--ink2);font-weight:500;white-space:nowrap}
+.chart-bar-bg{flex:1;background:var(--paper);border-radius:8px;height:24px;overflow:hidden;position:relative;border:1px solid var(--line)}
+.chart-bar-fill{background:var(--accent);height:100%;border-radius:7px;transition:width 0.4s ease}
+.chart-value{width:70px;text-align:right;font-weight:700;color:var(--ink)}
+
+@media(prefers-reduced-motion:reduce){.ans,.chart-bar-fill{animation:none;transition:none}}
 </style>
 </head>
 <body>
@@ -111,7 +119,8 @@ input[type=text],input[type=number]{width:100%;font:inherit;padding:9px 10px;bor
 
 <nav class="nav-tabs" role="tablist">
   <button id="tabReview" class="active" onclick="switchPage('review')">🎴 單字卡複習</button>
-  <button id="tabRanking" onclick="switchPage('ranking')">📊 弱點排行榜 TOP 10</button>
+  <button id="tabRanking" onclick="switchPage('ranking')">📊 弱點排行榜</button>
+  <button id="tabChart" onclick="switchPage('chart')">📈 熟悉度分析</button>
   <button id="tabManage" onclick="switchPage('manage')">✏️ 編輯單字庫</button>
 </nav>
 
@@ -179,7 +188,16 @@ input[type=text],input[type=number]{width:100%;font:inherit;padding:9px 10px;bor
   </div>
 </div>
 
-<!-- 分頁 3：編輯單字庫 -->
+<!-- 分頁 3：熟悉度柱狀分析圖 -->
+<div id="pageChart" class="page">
+  <div class="rank-card">
+    <h2 style="margin:0 0 8px;font-size:20px;font-family:var(--serif)">熟悉度分佈統計</h2>
+    <p class="small" style="margin-bottom:16px">即時分析單字庫中熟悉度 0 ~ 5 級的數量比例：</p>
+    <div id="chartContainer" class="chart-container"></div>
+  </div>
+</div>
+
+<!-- 分頁 4：編輯單字庫 -->
 <div id="pageManage" class="page">
   <div class="rank-card">
     <h2 style="margin:0 0 12px;font-size:20px;font-family:var(--serif)">搜尋與編輯單字</h2>
@@ -229,7 +247,7 @@ let cur=null, qType='kana', shown=false, rated=false;
 
 /* ---------- page switch ---------- */
 window.switchPage = function(pName){
-  ['Review','Ranking','Manage'].forEach(name => {
+  ['Review','Ranking','Chart','Manage'].forEach(name => {
     $('page' + name).classList.remove('active');
     $('tab' + name).classList.remove('active');
   });
@@ -241,6 +259,10 @@ window.switchPage = function(pName){
     $('pageRanking').classList.add('active');
     $('tabRanking').classList.add('active');
     renderRanking();
+  } else if(pName === 'chart'){
+    $('pageChart').classList.add('active');
+    $('tabChart').classList.add('active');
+    renderChart();
   } else if(pName === 'manage'){
     $('pageManage').classList.add('active');
     $('tabManage').classList.add('active');
@@ -284,6 +306,49 @@ function renderRanking(){
   container.appendChild(table);
 }
 
+/* ---------- render bar chart ---------- */
+function renderChart(){
+  const container = $('chartContainer');
+  container.innerHTML = '';
+
+  if(!words.length){
+    container.innerHTML = '<p class="small" style="text-align:center;padding:20px 0">單字庫是空的，尚無統計數據。</p>';
+    return;
+  }
+
+  // 統計 0~5 各等級數量
+  const counts = [0, 0, 0, 0, 0, 0];
+  words.forEach(w => {
+    const lv = Math.min(5, Math.max(0, w.level || 0));
+    counts[lv]++;
+  });
+
+  const maxCount = Math.max(...counts, 1);
+  const colors = ['#b83a30', '#d96b27', '#e6a100', '#6b7694', '#2d7a57', '#1b5e3a'];
+
+  counts.forEach((count, lv) => {
+    const pct = Math.round((count / words.length) * 100);
+    const barPct = Math.round((count / maxCount) * 100);
+
+    const row = el('div', 'chart-row');
+    
+    const label = el('div', 'chart-label', `Lv. ${lv} (${count}個)`);
+    
+    const barBg = el('div', 'chart-bar-bg');
+    const barFill = el('div', 'chart-bar-fill');
+    barFill.style.width = barPct + '%';
+    barFill.style.backgroundColor = colors[lv];
+    barBg.appendChild(barFill);
+    
+    const val = el('div', 'chart-value', `${pct}%`);
+
+    row.appendChild(label);
+    row.appendChild(barBg);
+    row.appendChild(val);
+    container.appendChild(row);
+  });
+}
+
 /* ---------- manage list & edit modal ---------- */
 function renderWordManageList(){
   const container = $('wordListContainer');
@@ -297,7 +362,7 @@ function renderWordManageList(){
   });
 
   if(filtered.length === 0){
-    container.innerHTML = '<p class="small" style="text-align:center;padding:20px 0">沒有找不到符合條件的單字。</p>';
+    container.innerHTML = '<p class="small" style="text-align:center;padding:20px 0">找不到符合條件的單字。</p>';
     return;
   }
 

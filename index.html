@@ -20,8 +20,8 @@ h1 small{display:block;font-family:var(--sans);font-size:14px;font-weight:400;co
 .count span{font-size:13px;color:var(--ink2);display:block}
 .count input{font:inherit;font-size:13px;border:1px solid var(--line);border-radius:6px;padding:2px 6px;background:#fff;color:var(--ink)}
 
-.nav-tabs{display:flex;gap:8px;margin-bottom:16px;border-bottom:2px solid var(--line);padding-bottom:8px}
-.nav-tabs button{border:0;background:transparent;color:var(--ink2);font:inherit;font-size:16px;font-weight:700;padding:6px 12px;cursor:pointer;border-radius:6px}
+.nav-tabs{display:flex;gap:8px;margin-bottom:16px;border-bottom:2px solid var(--line);padding-bottom:8px;flex-wrap:wrap}
+.nav-tabs button{border:0;background:transparent;color:var(--ink2);font:inherit;font-size:15px;font-weight:700;padding:6px 12px;cursor:pointer;border-radius:6px}
 .nav-tabs button.active{background:var(--accent);color:#fff}
 
 .page{display:none}
@@ -31,7 +31,6 @@ h1 small{display:block;font-family:var(--sans);font-size:14px;font-weight:400;co
 .stats div{flex:1;background:var(--card);border-radius:10px;padding:8px 14px;border:1px solid var(--line);font-size:14px;color:var(--ink2)}
 .stats b{font-size:20px;color:var(--ink);margin-left:6px}
 
-/* 控制區域與選單樣式 */
 .controls{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
 .select-input{border:1px solid var(--accent);border-radius:10px;background:#fff;color:var(--accent);padding:8px 10px;font:inherit;font-size:14px;cursor:pointer;font-weight:500;outline:none;flex:1 1 auto;min-width:130px}
 .select-input:focus{outline:2px solid #f0b429}
@@ -56,6 +55,8 @@ h1 small{display:block;font-family:var(--sans);font-size:14px;font-weight:400;co
 button{font-family:inherit}
 .btn{border:0;border-radius:10px;padding:12px 20px;font-size:16px;cursor:pointer;background:var(--accent);color:#fff}
 .btn.ghost{background:#fff;color:var(--accent);border:1px solid var(--accent)}
+.btn.danger{background:var(--red);color:#fff}
+.btn.sm{padding:6px 12px;font-size:13px;border-radius:6px}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 .btn:focus-visible,.toggle-btn:focus-visible,summary:focus-visible{outline:3px solid #f0b429;outline-offset:2px}
 .row{display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap}
@@ -69,7 +70,7 @@ summary{cursor:pointer;padding:12px 0;font-weight:500}
 details[open] summary{border-bottom:1px solid var(--line);margin-bottom:12px}
 details>div{padding-bottom:16px}
 label{display:block;font-size:14px;margin-top:8px;color:var(--ink2)}
-input[type=text]{width:100%;font:inherit;padding:9px 10px;border:1px solid var(--line);border-radius:8px;margin-top:2px}
+input[type=text],input[type=number]{width:100%;font:inherit;padding:9px 10px;border:1px solid var(--line);border-radius:8px;margin-top:2px}
 .msg{margin-top:10px;font-size:14px;white-space:pre-line}.msg.err{color:var(--red)}.msg.ok{color:var(--ok)}
 .empty{padding:20px 0}
 .empty p{margin:0 0 14px;color:var(--ink2)}
@@ -82,6 +83,18 @@ input[type=text]{width:100%;font:inherit;padding:9px 10px;border:1px solid var(-
 .rank-num{font-weight:700;font-family:var(--serif);font-size:16px;color:var(--accent);width:36px;text-align:center}
 .rank-num.top3{color:var(--red);font-size:18px}
 .bad-tag{color:var(--red);font-weight:700}
+
+/* 編輯單字庫頁面樣式 */
+.edit-search{display:flex;gap:10px;margin-bottom:14px}
+.word-list{display:flex;flex-direction:column;gap:8px;max-height:500px;overflow-y:auto;padding-right:4px}
+.word-item{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center}
+.word-info{display:flex;flex-direction:column}
+.word-title{font-weight:700;font-size:16px;color:var(--ink)}
+.word-sub{font-size:13px;color:var(--ink2)}
+.modal-bg{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);display:none;justify-content:center;align-items:center;z-index:100;padding:16px}
+.modal-bg.active{display:flex}
+.modal{background:var(--card);border-radius:14px;padding:24px;width:100%;max-width:480px;box-shadow:0 10px 25px rgba(0,0,0,0.15)}
+.modal h3{margin:0 0 16px;font-family:var(--serif);font-size:20px}
 
 @media(prefers-reduced-motion:reduce){.ans{animation:none}}
 </style>
@@ -97,10 +110,12 @@ input[type=text]{width:100%;font:inherit;padding:9px 10px;border:1px solid var(-
 </header>
 
 <nav class="nav-tabs" role="tablist">
-  <button id="tabReview" class="active" onclick="switchPage('review')"> 單字卡複習</button>
-  <button id="tabRanking" onclick="switchPage('ranking')"> 弱點排行榜 TOP 10</button>
+  <button id="tabReview" class="active" onclick="switchPage('review')">🎴 單字卡複習</button>
+  <button id="tabRanking" onclick="switchPage('ranking')">📊 弱點排行榜 TOP 10</button>
+  <button id="tabManage" onclick="switchPage('manage')">✏️ 編輯單字庫</button>
 </nav>
 
+<!-- 分頁 1：單字卡複習 -->
 <div id="pageReview" class="page active">
   <section class="stats" aria-label="學習統計">
     <div>單字總數<b id="total">0</b></div>
@@ -108,16 +123,14 @@ input[type=text]{width:100%;font:inherit;padding:9px 10px;border:1px solid var(-
   </section>
 
   <div class="controls">
-    <!-- 出題模式下拉選單 -->
     <select id="modeSelect" class="select-input">
-      <option value="mix"> 隨機混合</option>
-      <option value="kanji"> 只抽漢字</option>
-      <option value="kana"> 只抽平假名</option>
+      <option value="mix">🎲 隨機混合</option>
+      <option value="kanji">🈁 只抽漢字</option>
+      <option value="kana">あ 只抽平假名</option>
     </select>
 
-    <!-- 熟悉度篩選下拉選單 -->
     <select id="levelSelect" class="select-input">
-      <option value="all"> 全部熟悉度</option>
+      <option value="all">⭐ 全部熟悉度</option>
       <option value="0">熟悉度 0</option>
       <option value="1">熟悉度 1 以下</option>
       <option value="2">熟悉度 2 以下</option>
@@ -125,7 +138,6 @@ input[type=text]{width:100%;font:inherit;padding:9px 10px;border:1px solid var(-
       <option value="4">熟悉度 4 以下</option>
     </select>
 
-    <!-- 近期新增開關按鈕 -->
     <button class="toggle-btn" id="recentBtn" aria-pressed="false">✨ 近期新增</button>
   </div>
 
@@ -158,6 +170,7 @@ input[type=text]{width:100%;font:inherit;padding:9px 10px;border:1px solid var(-
   </details>
 </div>
 
+<!-- 分頁 2：弱點排行榜 -->
 <div id="pageRanking" class="page">
   <div class="rank-card">
     <h2 style="margin:0 0 12px;font-size:20px;font-family:var(--serif)">錯最多次的單字 TOP 10</h2>
@@ -166,8 +179,41 @@ input[type=text]{width:100%;font:inherit;padding:9px 10px;border:1px solid var(-
   </div>
 </div>
 
+<!-- 分頁 3：編輯單字庫 -->
+<div id="pageManage" class="page">
+  <div class="rank-card">
+    <h2 style="margin:0 0 12px;font-size:20px;font-family:var(--serif)">搜尋與編輯單字</h2>
+    <div class="edit-search">
+      <input type="text" id="searchKw" placeholder="搜尋漢字或平假名..." autocomplete="off">
+    </div>
+    <div id="wordListContainer" class="word-list"></div>
+  </div>
+</div>
+
 <p class="small" style="margin-top:16px">資料儲存在這個瀏覽器的 localStorage，換裝置或網址不會同步，請定期匯出 CSV 備份。</p>
 </main>
+
+<!-- 編輯單字彈窗 (Modal) -->
+<div id="editModalBg" class="modal-bg">
+  <div class="modal">
+    <h3>修改單字內容</h3>
+    <input type="hidden" id="editIndex">
+    <label>漢字<input type="text" id="editKanji" autocomplete="off"></label>
+    <label>平假名（必填）<input type="text" id="editKana" autocomplete="off"></label>
+    <label>中文意思（必填）<input type="text" id="editMeaning" autocomplete="off"></label>
+    <div style="display:flex;gap:10px">
+      <div style="flex:1"><label>熟悉度 (0~5)<input type="number" id="editLevel" min="0" max="5"></label></div>
+      <div style="flex:1"><label>天數 (day)<input type="number" id="editDay" min="0"></label></div>
+    </div>
+    <div class="row" style="justify-content:space-between;margin-top:20px">
+      <button class="btn danger sm" id="deleteWordBtn">刪除單字</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn ghost sm" onclick="closeEditModal()">取消</button>
+        <button class="btn sm" id="saveEditBtn">儲存修改</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
 (function(){
@@ -181,21 +227,28 @@ const $=id=>document.getElementById(id);
 let words=[], examStr='2026-12-06', mode='mix', levelFilter='all', isRecentOnly=false;
 let cur=null, qType='kana', shown=false, rated=false;
 
+/* ---------- page switch ---------- */
 window.switchPage = function(pName){
+  ['Review','Ranking','Manage'].forEach(name => {
+    $('page' + name).classList.remove('active');
+    $('tab' + name).classList.remove('active');
+  });
+
   if(pName === 'review'){
     $('pageReview').classList.add('active');
-    $('pageRanking').classList.remove('active');
     $('tabReview').classList.add('active');
-    $('tabRanking').classList.remove('active');
-  } else {
-    $('pageReview').classList.remove('active');
+  } else if(pName === 'ranking'){
     $('pageRanking').classList.add('active');
-    $('tabReview').classList.remove('active');
     $('tabRanking').classList.add('active');
     renderRanking();
+  } else if(pName === 'manage'){
+    $('pageManage').classList.add('active');
+    $('tabManage').classList.add('active');
+    renderWordManageList();
   }
 };
 
+/* ---------- render ranking ---------- */
 function renderRanking(){
   const container = $('rankContainer');
   container.innerHTML = '';
@@ -231,6 +284,101 @@ function renderRanking(){
   container.appendChild(table);
 }
 
+/* ---------- manage list & edit modal ---------- */
+function renderWordManageList(){
+  const container = $('wordListContainer');
+  const kw = ($('searchKw').value || '').trim().toLowerCase();
+  container.innerHTML = '';
+
+  const filtered = words.map((w, idx) => ({ ...w, originalIndex: idx }))
+  .filter(w => {
+    if(!kw) return true;
+    return (w.kanji && w.kanji.toLowerCase().includes(kw)) || (w.kana && w.kana.toLowerCase().includes(kw)) || (w.meaning && w.meaning.toLowerCase().includes(kw));
+  });
+
+  if(filtered.length === 0){
+    container.innerHTML = '<p class="small" style="text-align:center;padding:20px 0">沒有找不到符合條件的單字。</p>';
+    return;
+  }
+
+  filtered.forEach(item => {
+    const div = el('div', 'word-item');
+    const titleText = item.kanji ? `${item.kanji} (${item.kana})` : item.kana;
+    
+    const info = el('div', 'word-info');
+    info.appendChild(el('div', 'word-title', titleText));
+    info.appendChild(el('div', 'word-sub', `${item.meaning} ｜ 熟悉度: ${item.level} ｜ day: ${item.day}`));
+    
+    const editBtn = el('button', 'btn ghost sm', '編輯');
+    editBtn.onclick = () => openEditModal(item.originalIndex);
+
+    div.appendChild(info);
+    div.appendChild(editBtn);
+    container.appendChild(div);
+  });
+}
+
+$('searchKw').oninput = renderWordManageList;
+
+function openEditModal(index){
+  const w = words[index];
+  if(!w) return;
+  $('editIndex').value = index;
+  $('editKanji').value = w.kanji || '';
+  $('editKana').value = w.kana || '';
+  $('editMeaning').value = w.meaning || '';
+  $('editLevel').value = w.level;
+  $('editDay').value = w.day;
+  $('editModalBg').classList.add('active');
+}
+
+window.closeEditModal = function(){
+  $('editModalBg').classList.remove('active');
+};
+
+$('saveEditBtn').onclick = () => {
+  const index = Number($('editIndex').value);
+  if(index < 0 || index >= words.length) return;
+
+  const kanji = $('editKanji').value.trim();
+  const kana = $('editKana').value.trim();
+  const meaning = $('editMeaning').value.trim();
+  const level = Math.min(5, Math.max(0, Number($('editLevel').value) || 0));
+  const day = Math.max(0, Number($('editDay').value) || 0);
+
+  if(!kana || !meaning){
+    alert('請填寫平假名與中文意思！');
+    return;
+  }
+
+  words[index].kanji = kanji;
+  words[index].kana = kana;
+  words[index].meaning = meaning;
+  words[index].level = level;
+  words[index].day = day;
+
+  save();
+  renderStats();
+  renderWordManageList();
+  closeEditModal();
+  next();
+};
+
+$('deleteWordBtn').onclick = () => {
+  const index = Number($('editIndex').value);
+  if(index < 0 || index >= words.length) return;
+
+  if(confirm('確定要刪除這個單字嗎？')){
+    words.splice(index, 1);
+    save();
+    renderStats();
+    renderWordManageList();
+    closeEditModal();
+    next();
+  }
+};
+
+/* ---------- storage ---------- */
 function load(){
   try{
     const w=JSON.parse(localStorage.getItem(WK)||'[]'); 
@@ -259,24 +407,20 @@ function renderStats(){
   $('avg').textContent=words.length?(words.reduce((s,w)=>s+w.level,0)/words.length).toFixed(1):'0.0';
 }
 
-/* 多重條件組合篩選 */
 function filterWords(){
   if(!words.length) return [];
   let pool = words;
 
-  // 1. 熟悉度選單篩選
   if(levelFilter !== 'all'){
     const maxLv = Number(levelFilter);
     pool = pool.filter(w => w.level <= maxLv);
   }
 
-  // 2. 近期新增按鈕篩選
   if(isRecentOnly){
     const currentDay = daysLeft().n;
     pool = pool.filter(w => typeof w.day === 'number' && w.day >= currentDay && w.day <= currentDay + 1);
   }
 
-  // 3. 出題模式（只抽漢字）篩選
   if(mode === 'kanji'){
     pool = pool.filter(w => w.kanji && w.kanji.trim() !== '');
   }
@@ -288,7 +432,6 @@ function weight(w){return BASE[w.level]+14/(1+Math.max(0,w.day)/30);}
 function draw(prev){
   let pool = filterWords();
 
-  // 若當前條件下搜不到單字且開著近期新增，自動復原該項
   if(!pool.length && isRecentOnly){
     alert('當前組合條件下沒有近期新增的單字，將自動取消「近期新增」篩選。');
     isRecentOnly = false;
@@ -475,7 +618,6 @@ function importCSV(text){
   if(!cur&&words.length) next();
 }
 
-/* 控制選項事件綁定 */
 $('modeSelect').onchange=e=>{
   mode = e.target.value;
   next();

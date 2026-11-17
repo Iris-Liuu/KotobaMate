@@ -27,9 +27,28 @@ h1 small{display:block;font-family:var(--sans);font-size:14px;font-weight:400;co
 .page{display:none}
 .page.active{display:block}
 
-.stats{display:flex;gap:10px;margin-bottom:14px}
-.stats div{flex:1;background:var(--card);border-radius:10px;padding:8px 14px;border:1px solid var(--line);font-size:14px;color:var(--ink2)}
-.stats b{font-size:20px;color:var(--ink);margin-left:6px}
+/* 統計區塊與平均熟悉度可視化 */
+.stats{display:flex;gap:10px;margin-bottom:14px;align-items:stretch}
+.stats > div{flex:1;background:var(--card);border-radius:10px;padding:10px 14px;border:1px solid var(--line);font-size:14px;color:var(--ink2);display:flex;flex-direction:column;justify-content:center}
+.stat-top{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px}
+.stats b{font-size:22px;color:var(--ink);margin-left:4px;display:inline-block;transition:transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.25s}
+.stats b.pop-up{transform:scale(1.22);color:var(--ok)}
+.stats b.pop-down{transform:scale(1.22);color:var(--red)}
+
+/* 變化量跳動小標籤 */
+.delta-badge{font-size:12px;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:4px;display:inline-block;animation:floatUp 1.6s ease forwards}
+.delta-badge.up{background:#e6f4ea;color:var(--ok)}
+.delta-badge.down{background:#fce8e6;color:var(--red)}
+@keyframes floatUp{
+  0%{opacity:0;transform:translateY(4px) scale(0.9)}
+  15%{opacity:1;transform:translateY(0) scale(1)}
+  80%{opacity:1;transform:translateY(-2px)}
+  100%{opacity:0;transform:translateY(-6px)}
+}
+
+/* 進度條樣式 */
+.avg-bar-wrap{width:100%;height:7px;background:var(--paper);border-radius:99px;overflow:hidden;margin-top:6px;border:1px solid var(--line)}
+.avg-bar-fill{height:100%;background:var(--accent);border-radius:99px;width:0%;transition:width 0.45s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.45s}
 
 .controls{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
 .select-input{border:1px solid var(--accent);border-radius:10px;background:#fff;color:var(--accent);padding:8px 10px;font:inherit;font-size:14px;cursor:pointer;font-weight:500;outline:none;flex:1 1 auto;min-width:130px}
@@ -84,7 +103,6 @@ input[type=text],input[type=number]{width:100%;font:inherit;padding:9px 10px;bor
 .rank-num.top3{color:var(--red);font-size:18px}
 .bad-tag{color:var(--red);font-weight:700}
 
-/* 編輯單字庫與分析圖表樣式 */
 .edit-search{display:flex;gap:10px;margin-bottom:14px}
 .word-list{display:flex;flex-direction:column;gap:8px;max-height:500px;overflow-y:auto;padding-right:4px}
 .word-item{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center}
@@ -96,7 +114,6 @@ input[type=text],input[type=number]{width:100%;font:inherit;padding:9px 10px;bor
 .modal{background:var(--card);border-radius:14px;padding:24px;width:100%;max-width:480px;box-shadow:0 10px 25px rgba(0,0,0,0.15)}
 .modal h3{margin:0 0 16px;font-family:var(--serif);font-size:20px}
 
-/* 長條圖專用 CSS */
 .chart-container{display:flex;flex-direction:column;gap:12px;margin-top:16px}
 .chart-row{display:flex;align-items:center;gap:10px;font-size:13px}
 .chart-label{width:75px;color:var(--ink2);font-weight:500;white-space:nowrap}
@@ -104,7 +121,7 @@ input[type=text],input[type=number]{width:100%;font:inherit;padding:9px 10px;bor
 .chart-bar-fill{background:var(--accent);height:100%;border-radius:7px;transition:width 0.4s ease}
 .chart-value{width:70px;text-align:right;font-weight:700;color:var(--ink)}
 
-@media(prefers-reduced-motion:reduce){.ans,.chart-bar-fill{animation:none;transition:none}}
+@media(prefers-reduced-motion:reduce){.ans,.chart-bar-fill,.avg-bar-fill,.stats b,.delta-badge{animation:none;transition:none}}
 </style>
 </head>
 <body>
@@ -127,8 +144,18 @@ input[type=text],input[type=number]{width:100%;font:inherit;padding:9px 10px;bor
 <!-- 分頁 1：單字卡複習 -->
 <div id="pageReview" class="page active">
   <section class="stats" aria-label="學習統計">
-    <div>單字總數<b id="total">0</b></div>
-    <div>平均熟悉度<b id="avg">0.0</b><span class="small">/ 5</span></div>
+    <div>
+      <div class="stat-top">單字總數<b id="total">0</b></div>
+    </div>
+    <div>
+      <div class="stat-top">
+        平均熟悉度<b id="avg">0.00</b><span class="small">/ 5</span>
+        <span id="avgDelta"></span>
+      </div>
+      <div class="avg-bar-wrap" title="整體平均熟悉度進度">
+        <div id="avgBar" class="avg-bar-fill"></div>
+      </div>
+    </div>
   </section>
 
   <div class="controls">
@@ -244,6 +271,7 @@ const SAMPLE=[
 const $=id=>document.getElementById(id);
 let words=[], examStr='2026-12-06', mode='mix', levelFilter='all', isRecentOnly=false;
 let cur=null, qType='kana', shown=false, rated=false;
+let lastAvg=null, deltaTimer=null;
 
 /* ---------- page switch ---------- */
 window.switchPage = function(pName){
@@ -316,7 +344,6 @@ function renderChart(){
     return;
   }
 
-  // 統計 0~5 各等級數量
   const counts = [0, 0, 0, 0, 0, 0];
   words.forEach(w => {
     const lv = Math.min(5, Math.max(0, w.level || 0));
@@ -331,7 +358,6 @@ function renderChart(){
     const barPct = Math.round((count / maxCount) * 100);
 
     const row = el('div', 'chart-row');
-    
     const label = el('div', 'chart-label', `Lv. ${lv} (${count}個)`);
     
     const barBg = el('div', 'chart-bar-bg');
@@ -423,7 +449,7 @@ $('saveEditBtn').onclick = () => {
   words[index].day = day;
 
   save();
-  renderStats();
+  renderStats(true);
   renderWordManageList();
   closeEditModal();
   next();
@@ -436,7 +462,7 @@ $('deleteWordBtn').onclick = () => {
   if(confirm('確定要刪除這個單字嗎？')){
     words.splice(index, 1);
     save();
-    renderStats();
+    renderStats(false);
     renderWordManageList();
     closeEditModal();
     next();
@@ -467,9 +493,45 @@ function renderCount(){
   $('daysLabel').textContent=d.over?'考試已結束':(d.n===0?'今天考試':'天後考試');
 }
 
-function renderStats(){
-  $('total').textContent=words.length;
-  $('avg').textContent=words.length?(words.reduce((s,w)=>s+w.level,0)/words.length).toFixed(1):'0.0';
+/* ---------- 統計與可視化進度條 ---------- */
+function renderStats(animate = false){
+  $('total').textContent = words.length;
+  const curAvg = words.length ? (words.reduce((s, w) => s + w.level, 0) / words.length) : 0;
+  const avgEl = $('avg');
+  const barEl = $('avgBar');
+  const deltaEl = $('avgDelta');
+
+  avgEl.textContent = curAvg.toFixed(2);
+
+  // 更新進度條寬度與顏色
+  const pct = Math.min(100, Math.max(0, (curAvg / 5) * 100));
+  barEl.style.width = pct + '%';
+  if(curAvg < 1.5) barEl.style.backgroundColor = 'var(--red)';
+  else if(curAvg < 3.5) barEl.style.backgroundColor = 'var(--accent)';
+  else barEl.style.backgroundColor = 'var(--ok)';
+
+  // 數值變化跳動回饋
+  if(animate && lastAvg !== null && Math.abs(curAvg - lastAvg) > 0.0001){
+    const diff = curAvg - lastAvg;
+    const isUp = diff > 0;
+    const sign = isUp ? '▲ +' : '▼ ';
+    // 若變動極小（例如單字庫龐大），顯示到小數點第3位以確保看得到變化
+    const diffText = Math.abs(diff) < 0.01 ? diff.toFixed(3) : diff.toFixed(2);
+
+    avgEl.classList.remove('pop-up', 'pop-down');
+    void avgEl.offsetWidth; // 觸發重繪重啟 CSS 動畫
+    avgEl.classList.add(isUp ? 'pop-up' : 'pop-down');
+
+    deltaEl.innerHTML = `<span class="delta-badge ${isUp ? 'up' : 'down'}">${sign}${diffText}</span>`;
+
+    clearTimeout(deltaTimer);
+    deltaTimer = setTimeout(() => {
+      avgEl.classList.remove('pop-up', 'pop-down');
+      deltaEl.innerHTML = '';
+    }, 1600);
+  }
+
+  lastAvg = curAvg;
 }
 
 function filterWords(){
@@ -603,7 +665,7 @@ function rate(d, resType){
   cur.level=Math.min(5,Math.max(0,cur.level+d));
   if(!cur.history) cur.history = [];
   cur.history.push({ time: Date.now(), res: resType });
-  save(); renderStats(); next();
+  save(); renderStats(true); next();
 }
 
 function msg(id,t,type){const m=$(id);m.textContent=t;m.className='msg '+(type||'');}
@@ -614,14 +676,14 @@ function sampleLoad(){
     const w={kanji:k,kana:h,meaning:m,level:0,day,history:[]};
     if(!keys.has(key(w))) words.push(w);
   });
-  save(); renderStats(); next();
+  save(); renderStats(false); next();
 }
 $('addBtn').onclick=()=>{
   const kanji=$('fKanji').value.trim(), kana=$('fKana').value.trim(), meaning=$('fMeaning').value.trim();
   if(!kana||!meaning){msg('addMsg','請填寫平假名與中文意思。','err');return;}
   const w={kanji,kana,meaning,level:0,day:daysLeft().n,history:[]};
   if(words.some(x=>key(x)===key(w))){msg('addMsg','這個單字已經在單字庫裡了。','err');return;}
-  words.push(w); save(); renderStats();
+  words.push(w); save(); renderStats(false);
   ['fKanji','fKana','fMeaning'].forEach(i=>$(i).value='');
   msg('addMsg','已加入：'+(kanji||kana)+'（'+meaning+'）','ok');
   if(!cur) next();
@@ -677,7 +739,7 @@ function importCSV(text){
     if(keys.has(key(w))){dup++;return;}
     keys.add(key(w)); words.push(w); added++;
   });
-  save(); renderStats();
+  save(); renderStats(false);
   let t='新增 '+added+' 個單字，略過重複 '+dup+' 個'+(errs.length?'，有問題的資料 '+errs.length+' 列未匯入：\n'+errs.slice(0,8).join('\n')+(errs.length>8?'\n…':''):'。');
   msg('csvMsg',t,errs.length&&!added?'err':'ok');
   if(!cur&&words.length) next();
@@ -701,7 +763,7 @@ $('examDate').onchange=e=>{
 };
 if('speechSynthesis' in window) speechSynthesis.onvoiceschanged=()=>{};
 
-load(); renderCount(); renderStats(); next();
+load(); renderCount(); renderStats(false); next();
 })();
 </script>
 </body>
